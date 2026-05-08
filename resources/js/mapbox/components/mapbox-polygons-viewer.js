@@ -1,4 +1,12 @@
-import { defaultMapboxConfig, mergeConfig, initMapbox, fitToFeatures } from './mapbox.js';
+import {
+    defaultMapboxConfig,
+    mergeConfig,
+    initMapbox,
+    fitToFeatures,
+    centerMap,
+    watchReactiveConfig,
+    configsDiffer,
+} from './mapbox.js';
 
 export default function mapboxPolygonsViewer({ featuresCollection, config }) {
     return {
@@ -11,6 +19,29 @@ export default function mapboxPolygonsViewer({ featuresCollection, config }) {
         init() {
             this.map = initMapbox(this.config);
             this.map.on('load', () => this.load(featuresCollection));
+
+            // Same bridge as the drawer, with the same "don't fight feature
+            // bounds" guard: when polygons are present, `fitToFeatures` owns
+            // the viewport.
+            watchReactiveConfig(this.$el, (next, prev) => {
+                if (! prev) return;
+                if (! configsDiffer(prev.map, next.map)) return;
+
+                const hasFeatures = (featuresCollection?.features?.length ?? 0) > 0;
+                if (hasFeatures) return;
+
+                const prevCenter = prev.map?.center;
+                const nextCenter = next.map?.center;
+                if (Array.isArray(nextCenter) && configsDiffer(prevCenter, nextCenter)) {
+                    centerMap(this.map, nextCenter, { animate: true });
+                }
+
+                const prevZoom = prev.map?.zoom;
+                const nextZoom = next.map?.zoom;
+                if (typeof nextZoom === 'number' && nextZoom !== prevZoom) {
+                    this.map.setZoom(nextZoom);
+                }
+            });
         },
 
         load(fc) {

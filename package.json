@@ -1,0 +1,14 @@
+{
+    "name": "@hitaqnia/haykal-filament-assets",
+    "private": true,
+    "version": "0.0.0",
+    "description": "Build pipeline for the Mapbox Alpine bundles shipped with hitaqnia/haykal-filament. Source modules live in resources/js/mapbox/components; running `npm run build` produces the four self-contained bundles in resources/js/mapbox/dist that the package's service provider registers with Filament.",
+    "scripts": {
+        "build": "esbuild resources/js/mapbox/components/mapbox-location-picker.js resources/js/mapbox/components/mapbox-location-viewer.js resources/js/mapbox/components/mapbox-polygons-drawer.js resources/js/mapbox/components/mapbox-polygons-viewer.js --bundle --format=esm --minify --outdir=resources/js/mapbox/dist --legal-comments=inline"
+    },
+    "dependencies": {
+        "@mapbox/mapbox-gl-draw": "^1.4.1",
+        "esbuild": "^0.28.0",
+        "mapbox-gl": "^3.15.0"
+    }
+}

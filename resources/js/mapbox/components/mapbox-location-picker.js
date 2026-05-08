@@ -1,4 +1,12 @@
-import { defaultMapboxConfig, mergeConfig, initMapbox, centerMap, createMarker } from './mapbox.js';
+import {
+    defaultMapboxConfig,
+    mergeConfig,
+    initMapbox,
+    centerMap,
+    createMarker,
+    watchReactiveConfig,
+    configsDiffer,
+} from './mapbox.js';
 
 export default function mapboxLocationPicker({ statePath, config }) {
     return {
@@ -17,6 +25,28 @@ export default function mapboxLocationPicker({ statePath, config }) {
             this.map.on('click', (e) => {
                 const { lng, lat } = e.lngLat;
                 this.addMarker(lng, lat);
+            });
+
+            // Bridge from Filament closures (`->mapCenter(fn (Get $get) => ...)`,
+            // `->mapZoom(...)`) into the running map. The Blade wrapper writes
+            // the latest server-rendered config into `data-mapbox-config`, and
+            // Livewire morphs that attribute on every render — so re-evaluated
+            // closure values reach us without rebuilding the map.
+            watchReactiveConfig(this.$el, (next, prev) => {
+                if (! prev) return; // initial pass: map already constructed with these values
+                if (! configsDiffer(prev.map, next.map)) return;
+
+                const prevCenter = prev.map?.center;
+                const nextCenter = next.map?.center;
+                if (Array.isArray(nextCenter) && configsDiffer(prevCenter, nextCenter)) {
+                    centerMap(this.map, nextCenter, { animate: true });
+                }
+
+                const prevZoom = prev.map?.zoom;
+                const nextZoom = next.map?.zoom;
+                if (typeof nextZoom === 'number' && nextZoom !== prevZoom) {
+                    this.map.setZoom(nextZoom);
+                }
             });
         },
 

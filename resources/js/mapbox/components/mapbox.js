@@ -87,6 +87,47 @@ export function centerMap(map, centerLngLat, { animate = true } = {}) {
     else map.setCenter(centerLngLat);
 }
 
+// Bridge for closure-driven `mapCenter` / `mapZoom` (and any future numeric
+// config knobs) on the Mapbox components. The Blade wrapper that hosts the
+// Alpine component carries the latest server-rendered config in its
+// `data-mapbox-config` attribute. Livewire morphs that attribute on every
+// render, so a MutationObserver attached to it survives both the wrapper's
+// child-level `wire:ignore` and Alpine's `x-ignore` — the live mapbox-gl
+// instance is preserved while center/zoom updates flow through.
+//
+// `apply(next, prev)` is invoked once at registration with the initial
+// config, then again every time the attribute mutates with the previous
+// value as the second argument. Components diff inside `apply` so they can
+// skip no-op work and avoid stomping on user-driven map movement.
+export function watchReactiveConfig(el, apply) {
+    const read = () => {
+        const raw = el.getAttribute('data-mapbox-config');
+        if (! raw) return null;
+        try { return JSON.parse(raw); } catch { return null; }
+    };
+
+    let last = read();
+    if (last) apply(last, null);
+
+    const observer = new MutationObserver(() => {
+        const next = read();
+        if (! next) return;
+        const prev = last;
+        last = next;
+        apply(next, prev);
+    });
+
+    observer.observe(el, { attributes: true, attributeFilter: ['data-mapbox-config'] });
+
+    return () => observer.disconnect();
+}
+
+export function configsDiffer(a, b) {
+    if (a === b) return false;
+    if (! a || ! b) return true;
+    return JSON.stringify(a) !== JSON.stringify(b);
+}
+
 export function createMarker({ lng, lat, draggable = false }) {
     return new mapboxgl.Marker({ draggable }).setLngLat([lng, lat]);
 }

@@ -644,6 +644,14 @@ Switching the `city` Select re-renders the picker with a fresh center and zoom �
 
 Both the Mapbox GL CSS (`mapbox-gl.css`, `mapbox-gl-draw.css`) and the compiled Alpine bundles for each component are registered with Filament automatically via `HaykalFilamentServiceProvider`. The bundles are loaded on request — pages that do not reference a Mapbox component pay no runtime cost.
 
+The bundles are built from `resources/js/mapbox/components/*.js` with esbuild and committed under `resources/js/mapbox/dist/`. After editing any source module, refresh them from inside the package:
+
+```bash
+cd packages/haykal-filament
+npm install
+npm run build
+```
+
 ### Right-to-left text
 
 Every component initializes [`mapbox-gl-rtl-text`](https://github.com/mapbox/mapbox-gl-rtl-text) on the first map render, so Arabic, Hebrew, and Persian labels join correctly instead of rendering as disconnected glyphs. The plugin is registered with lazy-loading (the third argument to `setRTLTextPlugin`), so its script is only fetched the first time a tile actually contains RTL text — non-RTL maps pay nothing.

@@ -1,4 +1,12 @@
-import { defaultMapboxConfig, mergeConfig, initMapbox, fitToFeatures } from './mapbox.js';
+import {
+    defaultMapboxConfig,
+    mergeConfig,
+    initMapbox,
+    fitToFeatures,
+    centerMap,
+    watchReactiveConfig,
+    configsDiffer,
+} from './mapbox.js';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 
 export default function mapboxPolygonsDrawer({ statePath, config }) {
@@ -221,6 +229,31 @@ export default function mapboxPolygonsDrawer({ statePath, config }) {
             this.map.on('draw.create', onCreate);
             this.map.on('draw.delete', sync);
             this.map.on('draw.update', sync);
+
+            // Bridge for closure-driven `mapCenter` / `mapZoom`. Polygons that
+            // are already drawn drive the viewport via `fitToFeatures`, so we
+            // only re-center/re-zoom when no polygon is currently selected
+            // — that way switching a sibling `live()` field reframes an empty
+            // map without yanking the user away from a polygon they're editing.
+            watchReactiveConfig(this.$el, (next, prev) => {
+                if (! prev) return;
+                if (! configsDiffer(prev.map, next.map)) return;
+
+                const hasFeatures = (this.draw.getAll()?.features?.length ?? 0) > 0;
+                if (hasFeatures) return;
+
+                const prevCenter = prev.map?.center;
+                const nextCenter = next.map?.center;
+                if (Array.isArray(nextCenter) && configsDiffer(prevCenter, nextCenter)) {
+                    centerMap(this.map, nextCenter, { animate: true });
+                }
+
+                const prevZoom = prev.map?.zoom;
+                const nextZoom = next.map?.zoom;
+                if (typeof nextZoom === 'number' && nextZoom !== prevZoom) {
+                    this.map.setZoom(nextZoom);
+                }
+            });
         },
 
         load(fc) {
