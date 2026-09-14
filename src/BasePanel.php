@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace HiTaqnia\Haykal\Filament;
 
+use Filament\Auth\Pages\Login;
 use Filament\Contracts\Plugin;
 use Filament\Enums\ThemeMode;
 use Filament\FontProviders\BunnyFontProvider;
@@ -12,12 +13,10 @@ use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages\Dashboard;
-use Filament\Pages\SimplePage;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Enums\Width;
 use HiTaqnia\Haykal\Core\Http\Middlewares\PermissionsTeamMiddleware;
-use HiTaqnia\Haykal\Filament\Auth\HuwiyaConsentLogin;
 use HiTaqnia\Haykal\Filament\Http\Middlewares\FilamentTenancyMiddleware;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -32,9 +31,9 @@ use LaraZeus\SpatieTranslatable\SpatieTranslatablePlugin;
 /**
  * Base class for every Haykal Filament panel.
  *
- * Wires the Filament middleware stack, the Huwiya-backed login page,
- * sensible defaults (SPA mode, full-width layout, light theme, no global
- * search), convention-driven resource/page/widget/cluster discovery under
+ * Wires the Filament middleware stack, sensible defaults (SPA mode,
+ * full-width layout, light theme, no global search), convention-driven
+ * resource/page/widget/cluster discovery under
  * `app/Panels/<Name>`, and tenant-aware middleware that bridges Filament's
  * tenant resolution into Haykal's `Tenancy` context.
  *
@@ -131,14 +130,17 @@ abstract class BasePanel extends PanelProvider
     }
 
     /**
-     * Login page class. Override to replace the Huwiya OAuth redirect
-     * with a custom auth page (for example, a pre-redirect consent page).
+     * Login page class. Defaults to Filament's own email + password page;
+     * override it with the application's own login page.
      *
-     * @return class-string<SimplePage>
+     * Haykal ships no login page — the sign-in screen is part of a product's
+     * UI, not of this package.
+     *
+     * @return class-string<Login>
      */
     protected function loginPage(): string
     {
-        return HuwiyaConsentLogin::class;
+        return Login::class;
     }
 
     /**

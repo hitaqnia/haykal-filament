@@ -2,7 +2,9 @@
 
 Filament foundation for HiTaqnia Laravel applications.
 
-`haykal-filament` ships the base classes, middlewares, theme, and Huwiya integration that every HiTaqnia Filament panel uses. Installing this package gives an application a complete panel baseline — authentication via Huwiya, tenant-aware middleware stack, opinionated UI defaults, a shared theme, and a convention-driven resource discovery layout — so panel definitions stay focused on the concrete resources, pages, and navigation of each panel.
+`haykal-filament` ships the base classes, middlewares, and theme that every HiTaqnia Filament panel uses. Installing this package gives an application a complete panel baseline — tenant-aware middleware stack, opinionated UI defaults, a shared theme, and a convention-driven resource discovery layout — so panel definitions stay focused on the concrete resources, pages, and navigation of each panel.
+
+It deliberately ships **no login page**: the sign-in screen is part of a product's UI, so each application supplies its own and points `BasePanel::loginPage()` at it.
 
 ---
 
@@ -29,7 +31,6 @@ Filament foundation for HiTaqnia Laravel applications.
 - Laravel 13 or later
 - `filament/filament` 5.5 or later
 - `hitaqnia/haykal-core` (shared kernel)
-- A running instance of the Huwiya Identity Provider
 
 ---
 
@@ -39,9 +40,8 @@ Filament foundation for HiTaqnia Laravel applications.
 
 | Class | Purpose |
 |---|---|
-| `HiTaqnia\Haykal\Filament\BasePanel` | Abstract `PanelProvider` that wires the shared middleware stack, Huwiya login, sensible defaults (SPA, full-width, light theme, no global search), convention-driven resource/page discovery (`app/Panels/<Name>`), and optional tenancy. |
+| `HiTaqnia\Haykal\Filament\BasePanel` | Abstract `PanelProvider` that wires the shared middleware stack, sensible defaults (SPA, full-width, light theme, no global search), convention-driven resource/page discovery (`app/Panels/<Name>`), and optional tenancy. |
 | `HiTaqnia\Haykal\Filament\BaseFilamentServiceProvider` | Abstract application-side provider that applies HiTaqnia's global Filament UX defaults: locked-down modals, no "Create another" action, slide-over column manager + filters, and "Click to copy" tooltips with em-dash placeholders for copyable text columns/entries. |
-| `HiTaqnia\Haykal\Filament\Auth\HuwiyaConsentLogin` | Consent-style login page — renders a single button that redirects the browser to the Huwiya OAuth authorization endpoint for the active panel's guard. Translated through `haykal-filament::auth.login.*` (en / ar / ku). |
 
 ### Resources and pages
 
@@ -104,20 +104,18 @@ That single require is enough — Phosphor icons (`codeat3/blade-phosphor-icons`
 
 ## Configuration
 
-### 1. Register the Huwiya web guard
+### 1. Point the panel at a login page
 
-In `config/auth.php`, register a guard for every panel that uses Huwiya authentication. The guard driver must be `huwiya-web`:
+`BasePanel::loginPage()` defaults to Filament's own email + password page. Override it with the application's page — that is the seam for a branded sign-in screen:
 
 ```php
-'guards' => [
-    // ... existing guards ...
-
-    'web' => [
-        'driver' => 'huwiya-web',
-        'provider' => 'users',
-    ],
-],
+protected function loginPage(): string
+{
+    return \Support\Filament\Auth\PhoneOrEmailLogin::class;
+}
 ```
+
+For a phone-or-email identity field, `HiTaqnia\Haykal\Core\Identity\PhoneOrEmailCredentials::resolve()` turns one input into guard credentials — email if it validates as one, otherwise the E.164 phone that `PhoneNumberCast` stores.
 
 Panels may each use their own named guard (`admin`, `residents`, …). Filament resolves the guard for the active panel via `Filament::getAuthGuard()`.
 
@@ -233,7 +231,7 @@ final class DevelopmentCompanyPanelProvider extends BasePanel
 |---|---|---|
 | `getId()` | *(abstract)* | Unique panel identifier. Drives routing, session scoping, and resource discovery. |
 | `customizePanel(Panel)` | *(abstract)* | Apply panel-specific branding, plugins, navigation, and theme. |
-| `loginPage()` | `HuwiyaConsentLogin::class` | Override to replace the Huwiya consent page with a custom page (auto-redirect, custom layout, …). |
+| `loginPage()` | `Filament\Auth\Pages\Login::class` | Override with the application's own login page. |
 | `tenantModel()` | `null` | Concrete Tenant model for this panel, or `null` for tenant-less panels. |
 | `tenantSlugAttribute()` | `null` | Column on the tenant model used as the URL slug. `null` falls back to the primary key. |
 | `defaultPlugins()` | SpatieTranslatable | Override to install a different base plugin set. |
